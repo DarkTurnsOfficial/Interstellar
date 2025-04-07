@@ -2,8 +2,7 @@ const config = {
   challenge: true, // Set to true if you want to enable password protection.
   users: {
     // You can add multiple users by doing username: 'password'.
-    Kena: "164153",
-    Jayden: "KingBunny",
+    Jayden: "CHANGE PASSWORD!!!! @*83838578591230093127932189",
     Jaxson: "Mountindew13",
     Cylis: "Cylis164341",
     Carter: "Pizza",
