@@ -7,7 +7,7 @@ const config = {
     Cylis: "Cylis164341",
     Carter: "Pizza",
     Owner: "4523",
-    Levi: "REDACTED927547219817581234723576234591234",
+    Levi: "Fucknigas12",
     Mason: "Hasard26!",
     River: "Something3655",
     Sylis: "Therealguy",
