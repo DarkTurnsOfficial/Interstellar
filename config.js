@@ -4,7 +4,7 @@ const config = {
     // You can add multiple users by doing username: 'password'.
     Jayden: "CHANGE PASSWORD!!!! @*83838578591230093127932189",
     Robby: "Robby0401",
-    Jacob: "3252456235235",
+    Jacob: "Strongpassword@jb",
     Jaxson: "Mountindew13",
     Cylis: "Cylis164341",
     Carter: "Pizza",
