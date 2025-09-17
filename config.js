@@ -13,6 +13,7 @@ const config = {
     Mason: "Hasard26!",
     River: "Something3655",
     Sylis: "Therealguy",
+    Drake: "67mango",
   },
 };
 
