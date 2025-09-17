@@ -14,6 +14,7 @@ const config = {
     River: "Something3655",
     Sylis: "Therealguy",
     Drake: "67mango",
+    Evan: "164093ea",
   },
 };
 
