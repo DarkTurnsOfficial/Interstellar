@@ -130,6 +130,7 @@
             <p><strong>Username:</strong> <span id="username">Loading...</span></p>
             <p><strong>IP Address:</strong> <span id="device-ip">Loading...</span></p>
             <p><strong>Browser:</strong> <span id="device-ua">Loading...</span></p>
+            <p><strong>Session ID:</strong> <span id="session-id">Loading...</span></p>
             <p><strong>Request Time:</strong> <span id="device-time">Loading...</span></p>
         </div>
 
@@ -155,6 +156,7 @@
                 document.getElementById('username').textContent = data.username || 'Unknown';
                 document.getElementById('device-ip').textContent = data.ip;
                 document.getElementById('device-ua').textContent = data.userAgent;
+                document.getElementById('session-id').textContent = data.sessionId || 'Unknown';
                 document.getElementById('device-time').textContent = new Date(data.timestamp).toLocaleString();
 
                 deviceFingerprint = data.fingerprint;

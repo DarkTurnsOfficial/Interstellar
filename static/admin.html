@@ -147,6 +147,10 @@
                 <div class="stat-number" id="blocked-count">-</div>
                 <div class="stat-label">Blocked Devices</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-number" id="active-sessions">-</div>
+                <div class="stat-label">Active Sessions</div>
+            </div>
         </div>
 
         <div style="text-align: center; margin: 20px 0;">
@@ -179,6 +183,49 @@
                 <div class="empty-state">No blocked devices</div>
             </div>
         </div>
+
+        <div class="section">
+            <h2>👥 Active Sessions</h2>
+            <div class="device-list" id="active-sessions-list">
+                <div class="empty-state">No active sessions</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚨 Security Alerts</h2>
+            <div class="device-list" id="security-alerts">
+                <div class="empty-state">No security alerts</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📢 Communication Tools</h2>
+            <div style="display: grid; gap: 20px;">
+                <div>
+                    <h3>Send Announcement</h3>
+                    <textarea id="announcement-message" placeholder="Enter announcement message..."
+                        style="width: 100%; height: 80px; padding: 10px; border-radius: 5px; border: 1px solid #ccc;"></textarea>
+                    <button class="btn btn-approve" onclick="sendAnnouncement()" style="margin-top: 10px;">📢 Send
+                        Announcement</button>
+                </div>
+                <div>
+                    <h3>Send Direct Message</h3>
+                    <input type="text" id="message-username" placeholder="Username"
+                        style="width: 200px; padding: 8px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                    <textarea id="direct-message" placeholder="Enter direct message..."
+                        style="width: 100%; height: 60px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-top: 10px;"></textarea>
+                    <button class="btn btn-approve" onclick="sendDirectMessage()" style="margin-top: 10px;">💬 Send
+                        Message</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Audit Log</h2>
+            <div class="device-list" id="audit-log">
+                <div class="empty-state">No audit entries</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -186,24 +233,37 @@
             showLoading();
 
             try {
-                const response = await fetch('/api/admin/devices');
-                const data = await response.json();
+                const [devicesResponse, sessionsResponse, alertsResponse, auditResponse] = await Promise.all([
+                    fetch('/api/admin/devices'),
+                    fetch('/api/admin/sessions'),
+                    fetch('/api/admin/security-alerts'),
+                    fetch('/api/admin/audit-log?limit=20')
+                ]);
 
-                updateStats(data);
-                updateDeviceLists(data);
+                const devicesData = await devicesResponse.json();
+                const sessionsData = await sessionsResponse.json();
+                const alertsData = await alertsResponse.json();
+                const auditData = await auditResponse.json();
+
+                updateStats(devicesData, sessionsData);
+                updateDeviceLists(devicesData);
+                updateSessionsList(sessionsData);
+                updateSecurityAlerts(alertsData);
+                updateAuditLog(auditData);
 
             } catch (error) {
-                console.error('Error loading devices:', error);
-                alert('Error loading device information');
+                console.error('Error loading data:', error);
+                alert('Error loading information');
             } finally {
                 hideLoading();
             }
         }
 
-        function updateStats(data) {
-            document.getElementById('approved-count').textContent = data.approved.length;
-            document.getElementById('pending-count').textContent = data.pendingDetails ? data.pendingDetails.length : 0;
-            document.getElementById('blocked-count').textContent = data.blocked.length;
+        function updateStats(devicesData, sessionsData) {
+            document.getElementById('approved-count').textContent = devicesData.approved.length;
+            document.getElementById('pending-count').textContent = devicesData.pendingDetails ? devicesData.pendingDetails.length : 0;
+            document.getElementById('blocked-count').textContent = devicesData.blocked.length;
+            document.getElementById('active-sessions').textContent = sessionsData.sessions ? sessionsData.sessions.length : 0;
         }
 
         function updateDeviceLists(data) {
@@ -301,6 +361,146 @@
             } catch (error) {
                 console.error('Error blocking device:', error);
                 alert('Error blocking device. Please try again.');
+            }
+        }
+
+        function updateSessionsList(data) {
+            const sessionsContainer = document.getElementById('active-sessions-list');
+            if (!data.sessions || data.sessions.length === 0) {
+                sessionsContainer.innerHTML = '<div class="empty-state">No active sessions</div>';
+            } else {
+                sessionsContainer.innerHTML = data.sessions.map(session =>
+                    `<div class="device-item">
+                        <div style="margin-bottom: 10px;">
+                            <strong>User:</strong> ${session.username}<br>
+                            <strong>IP:</strong> ${session.ip}<br>
+                            <strong>Browser:</strong> ${session.userAgent}<br>
+                            <strong>Login Time:</strong> ${new Date(session.loginTime).toLocaleString()}<br>
+                            <strong>Last Activity:</strong> ${new Date(session.lastActivity).toLocaleString()}<br>
+                            <strong>Session ID:</strong> ${session.sessionId.substring(0, 20)}...
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-deny" onclick="terminateSession('${session.sessionId}')">🔌 Terminate Session</button>
+                        </div>
+                    </div>`
+                ).join('');
+            }
+        }
+
+        function updateSecurityAlerts(data) {
+            const alertsContainer = document.getElementById('security-alerts');
+            if (!data.alerts || data.alerts.length === 0) {
+                alertsContainer.innerHTML = '<div class="empty-state">No security alerts</div>';
+            } else {
+                alertsContainer.innerHTML = data.alerts.map(alert =>
+                    `<div class="device-item ${alert.severity === 'high' ? 'blocked' : 'pending'}">
+                        <strong>${alert.severity.toUpperCase()}:</strong> ${alert.message}<br>
+                        <small>Type: ${alert.type}</small>
+                    </div>`
+                ).join('');
+            }
+        }
+
+        function updateAuditLog(data) {
+            const auditContainer = document.getElementById('audit-log');
+            if (!data.auditLog || data.auditLog.length === 0) {
+                auditContainer.innerHTML = '<div class="empty-state">No audit entries</div>';
+            } else {
+                auditContainer.innerHTML = data.auditLog.map(entry =>
+                    `<div class="device-item">
+                        <strong>${entry.action.replace('_', ' ').toUpperCase()}</strong> by ${entry.adminUser}<br>
+                        <strong>Target:</strong> ${entry.target}<br>
+                        <strong>Time:</strong> ${new Date(entry.timestamp).toLocaleString()}<br>
+                        ${entry.details.message ? `<strong>Details:</strong> ${entry.details.message}` : ''}
+                    </div>`
+                ).join('');
+            }
+        }
+
+        async function terminateSession(sessionId) {
+            if (!confirm('Are you sure you want to terminate this session?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/terminate-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ sessionId: sessionId })
+                });
+
+                if (response.ok) {
+                    alert('Session terminated successfully!');
+                    loadDevices(); // Refresh the list
+                } else {
+                    throw new Error('Failed to terminate session');
+                }
+            } catch (error) {
+                console.error('Error terminating session:', error);
+                alert('Error terminating session. Please try again.');
+            }
+        }
+
+        async function sendAnnouncement() {
+            const message = document.getElementById('announcement-message').value.trim();
+            if (!message) {
+                alert('Please enter an announcement message');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/announcement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (response.ok) {
+                    alert('Announcement sent successfully!');
+                    document.getElementById('announcement-message').value = '';
+                    loadDevices(); // Refresh to show in audit log
+                } else {
+                    throw new Error('Failed to send announcement');
+                }
+            } catch (error) {
+                console.error('Error sending announcement:', error);
+                alert('Error sending announcement. Please try again.');
+            }
+        }
+
+        async function sendDirectMessage() {
+            const username = document.getElementById('message-username').value.trim();
+            const message = document.getElementById('direct-message').value.trim();
+
+            if (!username || !message) {
+                alert('Please enter both username and message');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/direct-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username: username, message: message })
+                });
+
+                if (response.ok) {
+                    alert('Direct message sent successfully!');
+                    document.getElementById('message-username').value = '';
+                    document.getElementById('direct-message').value = '';
+                    loadDevices(); // Refresh to show in audit log
+                } else {
+                    throw new Error('Failed to send direct message');
+                }
+            } catch (error) {
+                console.error('Error sending direct message:', error);
+                alert('Error sending direct message. Please try again.');
             }
         }
 

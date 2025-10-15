@@ -40,9 +40,17 @@ app.use((req, res, next) => {
 
   const deviceInfo = deviceManager.getDeviceInfo(req);
   const status = deviceInfo.status;
+  const username = deviceInfo.username;
+
+  // Owner bypass - Owner can access without device approval
+  if (username === "Owner") {
+    console.log(chalk.green(`👑 Owner access granted: ${username} (${deviceInfo.ip}) - Session: ${deviceInfo.sessionId}`));
+    deviceManager.addActiveSession(deviceInfo);
+    return next();
+  }
 
   if (status === "blocked") {
-    console.log(chalk.red(`🚫 Blocked device attempted access: ${deviceInfo.ip} - ${deviceInfo.userAgent}`));
+    console.log(chalk.red(`🚫 Blocked device attempted access: ${username} (${deviceInfo.ip}) - ${deviceInfo.userAgent} - Session: ${deviceInfo.sessionId}`));
     return res.status(403).send(`
       <html>
         <head><title>Access Denied</title></head>
@@ -56,17 +64,19 @@ app.use((req, res, next) => {
   }
 
   if (status === "new") {
-    console.log(chalk.yellow(`🆕 New device detected: ${deviceInfo.username} (${deviceInfo.ip}) - ${deviceInfo.userAgent}`));
+    console.log(chalk.yellow(`🆕 New device detected: ${username} (${deviceInfo.ip}) - ${deviceInfo.userAgent} - Session: ${deviceInfo.sessionId} - Fingerprint: ${deviceInfo.fingerprint.substring(0, 16)}...`));
     deviceManager.addPendingDeviceWithDetails(deviceInfo);
     return res.redirect("/waiting-approval");
   }
 
   if (status === "pending") {
-    console.log(chalk.yellow(`⏳ Pending device attempted access: ${deviceInfo.username} (${deviceInfo.ip}) - ${deviceInfo.userAgent}`));
+    console.log(chalk.yellow(`⏳ Pending device attempted access: ${username} (${deviceInfo.ip}) - ${deviceInfo.userAgent} - Session: ${deviceInfo.sessionId}`));
     return res.redirect("/waiting-approval");
   }
 
-  // Device is approved, continue
+  // Device is approved, continue and track session
+  console.log(chalk.blue(`✅ Approved device access: ${username} (${deviceInfo.ip}) - Session: ${deviceInfo.sessionId}`));
+  deviceManager.addActiveSession(deviceInfo);
   next();
 });
 
@@ -162,28 +172,112 @@ app.get("/api/device-status", (req, res) => {
 
 app.post("/api/approve-device", (req, res) => {
   const { fingerprint } = req.body;
+  const adminUser = req.auth ? req.auth.user : "Unknown";
 
   if (!fingerprint) {
     return res.status(400).json({ error: "Fingerprint is required" });
   }
 
   deviceManager.approveDevice(fingerprint);
-  console.log(chalk.green(`✅ Device approved: ${fingerprint}`));
+  deviceManager.logAdminAction(adminUser, "approve_device", fingerprint, {});
+  console.log(chalk.green(`✅ Device approved by ${adminUser}: ${fingerprint}`));
 
   res.json({ success: true, message: "Device approved successfully" });
 });
 
 app.post("/api/block-device", (req, res) => {
   const { fingerprint } = req.body;
+  const adminUser = req.auth ? req.auth.user : "Unknown";
 
   if (!fingerprint) {
     return res.status(400).json({ error: "Fingerprint is required" });
   }
 
   deviceManager.blockDevice(fingerprint);
-  console.log(chalk.red(`🚫 Device blocked: ${fingerprint}`));
+  deviceManager.logAdminAction(adminUser, "block_device", fingerprint, {});
+  console.log(chalk.red(`🚫 Device blocked by ${adminUser}: ${fingerprint}`));
 
   res.json({ success: true, message: "Device blocked successfully" });
+});
+
+// Session management endpoints
+app.get("/api/admin/sessions", (req, res) => {
+  const sessions = deviceManager.getActiveSessions();
+  res.json({ sessions });
+});
+
+app.post("/api/admin/terminate-session", (req, res) => {
+  const { sessionId } = req.body;
+  const adminUser = req.auth ? req.auth.user : "Unknown";
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID is required" });
+  }
+
+  deviceManager.terminateSession(sessionId);
+  deviceManager.logAdminAction(adminUser, "terminate_session", sessionId, {});
+  console.log(chalk.yellow(`🔌 Session terminated by ${adminUser}: ${sessionId}`));
+
+  res.json({ success: true, message: "Session terminated successfully" });
+});
+
+// Communication endpoints
+app.post("/api/admin/announcement", (req, res) => {
+  const { message } = req.body;
+  const adminUser = req.auth ? req.auth.user : "Unknown";
+
+  if (!message) {
+    return res.status(400).json({ error: "Message is required" });
+  }
+
+  const announcement = deviceManager.sendAnnouncement(message, adminUser);
+  console.log(chalk.blue(`📢 Announcement sent by ${adminUser}: ${message}`));
+
+  res.json({ success: true, announcement });
+});
+
+app.post("/api/admin/direct-message", (req, res) => {
+  const { username, message } = req.body;
+  const adminUser = req.auth ? req.auth.user : "Unknown";
+
+  if (!username || !message) {
+    return res.status(400).json({ error: "Username and message are required" });
+  }
+
+  const directMessage = deviceManager.sendDirectMessage(username, message, adminUser);
+  console.log(chalk.blue(`💬 Direct message sent by ${adminUser} to ${username}: ${message}`));
+
+  res.json({ success: true, message: directMessage });
+});
+
+// Audit and security endpoints
+app.get("/api/admin/audit-log", (req, res) => {
+  const limit = parseInt(req.query.limit) || 100;
+  const auditLog = deviceManager.getAuditLog(limit);
+  res.json({ auditLog });
+});
+
+app.get("/api/admin/security-alerts", (req, res) => {
+  const alerts = deviceManager.detectSuspiciousActivity();
+  res.json({ alerts });
+});
+
+// User message endpoints
+app.get("/api/user/messages", (req, res) => {
+  const username = req.auth ? req.auth.user : "Unknown";
+  const messages = deviceManager.getMessagesForUser(username);
+  res.json({ messages });
+});
+
+app.post("/api/user/mark-message-read", (req, res) => {
+  const { messageId } = req.body;
+  deviceManager.markMessageAsRead(messageId);
+  res.json({ success: true });
+});
+
+app.get("/api/user/announcements", (req, res) => {
+  const announcements = deviceManager.getRecentAnnouncements();
+  res.json({ announcements });
 });
 
 // Admin endpoint to view device status

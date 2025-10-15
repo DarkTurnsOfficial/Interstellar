@@ -50,6 +50,10 @@ class DeviceManager {
     const ip = req.ip || req.connection.remoteAddress || "Unknown";
     const timestamp = new Date().toISOString();
     const username = req.auth ? req.auth.user : "Unknown";
+    const sessionId = this.generateSessionId(username);
+    const acceptLanguage = req.get("Accept-Language") || "Unknown";
+    const acceptEncoding = req.get("Accept-Encoding") || "Unknown";
+    const connection = req.get("Connection") || "Unknown";
 
     return {
       fingerprint,
@@ -57,8 +61,18 @@ class DeviceManager {
       ip,
       timestamp,
       username,
+      sessionId,
+      acceptLanguage,
+      acceptEncoding,
+      connection,
       status: this.getDeviceStatus(fingerprint),
     };
+  }
+
+  generateSessionId(username) {
+    const timestamp = Date.now();
+    const random = crypto.randomBytes(8).toString("hex");
+    return `${username}_${timestamp}_${random}`;
   }
 
   getDeviceStatus(fingerprint) {
@@ -95,17 +109,125 @@ class DeviceManager {
       // Remove any existing entry for this fingerprint
       this.devices.pendingDetails = this.devices.pendingDetails.filter(d => d.fingerprint !== deviceInfo.fingerprint);
 
-      // Add new entry
+      // Add new entry with comprehensive logging
       this.devices.pendingDetails.push({
         fingerprint: deviceInfo.fingerprint,
         username: deviceInfo.username,
         ip: deviceInfo.ip,
         userAgent: deviceInfo.userAgent,
         timestamp: deviceInfo.timestamp,
+        sessionId: deviceInfo.sessionId,
+        acceptLanguage: deviceInfo.acceptLanguage,
+        acceptEncoding: deviceInfo.acceptEncoding,
+        connection: deviceInfo.connection,
       });
 
       this.saveDevices();
     }
+  }
+
+  // Session management methods
+  addActiveSession(deviceInfo) {
+    if (!this.devices.activeSessions) {
+      this.devices.activeSessions = [];
+    }
+
+    // Remove any existing session for this sessionId
+    this.devices.activeSessions = this.devices.activeSessions.filter(s => s.sessionId !== deviceInfo.sessionId);
+
+    // Add new active session
+    this.devices.activeSessions.push({
+      sessionId: deviceInfo.sessionId,
+      username: deviceInfo.username,
+      fingerprint: deviceInfo.fingerprint,
+      ip: deviceInfo.ip,
+      userAgent: deviceInfo.userAgent,
+      loginTime: deviceInfo.timestamp,
+      lastActivity: deviceInfo.timestamp,
+      status: "active",
+    });
+
+    this.saveDevices();
+  }
+
+  updateSessionActivity(sessionId) {
+    if (this.devices.activeSessions) {
+      const session = this.devices.activeSessions.find(s => s.sessionId === sessionId);
+      if (session) {
+        session.lastActivity = new Date().toISOString();
+        this.saveDevices();
+      }
+    }
+  }
+
+  terminateSession(sessionId) {
+    if (this.devices.activeSessions) {
+      this.devices.activeSessions = this.devices.activeSessions.filter(s => s.sessionId !== sessionId);
+      this.saveDevices();
+    }
+  }
+
+  getActiveSessions() {
+    return this.devices.activeSessions || [];
+  }
+
+  getSessionsByUsername(username) {
+    return (this.devices.activeSessions || []).filter(s => s.username === username);
+  }
+
+  getSessionsByDevice(fingerprint) {
+    return (this.devices.activeSessions || []).filter(s => s.fingerprint === fingerprint);
+  }
+
+  // Security analysis methods
+  detectSuspiciousActivity() {
+    const alerts = [];
+    const sessions = this.getActiveSessions();
+
+    // Check for multiple sessions from same username
+    const sessionsByUser = {};
+    sessions.forEach(session => {
+      if (!sessionsByUser[session.username]) {
+        sessionsByUser[session.username] = [];
+      }
+      sessionsByUser[session.username].push(session);
+    });
+
+    Object.entries(sessionsByUser).forEach(([username, userSessions]) => {
+      if (userSessions.length > 1) {
+        alerts.push({
+          type: "multiple_sessions",
+          severity: "warning",
+          message: `User ${username} has ${userSessions.length} active sessions`,
+          username,
+          sessions: userSessions.map(s => s.sessionId),
+        });
+      }
+    });
+
+    // Check for multiple usernames from same device
+    const sessionsByDevice = {};
+    sessions.forEach(session => {
+      if (!sessionsByDevice[session.fingerprint]) {
+        sessionsByDevice[session.fingerprint] = [];
+      }
+      sessionsByDevice[session.fingerprint].push(session);
+    });
+
+    Object.entries(sessionsByDevice).forEach(([fingerprint, deviceSessions]) => {
+      const uniqueUsers = [...new Set(deviceSessions.map(s => s.username))];
+      if (uniqueUsers.length > 1) {
+        alerts.push({
+          type: "multiple_users_device",
+          severity: "high",
+          message: `Device ${fingerprint.substring(0, 16)}... has sessions from multiple users: ${uniqueUsers.join(", ")}`,
+          fingerprint,
+          users: uniqueUsers,
+        });
+      }
+    });
+
+    return alerts;
   }
 
   approveDevice(fingerprint) {
@@ -162,6 +284,99 @@ class DeviceManager {
 
   getBlockedDevices() {
     return this.devices.blocked;
+  }
+
+  // Audit logging methods
+  logAdminAction(adminUser, action, target, details = {}) {
+    if (!this.devices.auditLog) {
+      this.devices.auditLog = [];
+    }
+
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      adminUser,
+      action,
+      target,
+      details,
+      id: crypto.randomBytes(8).toString("hex"),
+    };
+
+    this.devices.auditLog.push(logEntry);
+
+    // Keep only last 1000 audit entries
+    if (this.devices.auditLog.length > 1000) {
+      this.devices.auditLog = this.devices.auditLog.slice(-1000);
+    }
+
+    this.saveDevices();
+    return logEntry;
+  }
+
+  getAuditLog(limit = 100) {
+    const logs = this.devices.auditLog || [];
+    return logs.slice(-limit).reverse();
+  }
+
+  // Communication methods
+  sendAnnouncement(message, adminUser) {
+    if (!this.devices.announcements) {
+      this.devices.announcements = [];
+    }
+
+    const announcement = {
+      id: crypto.randomBytes(8).toString("hex"),
+      message,
+      adminUser,
+      timestamp: new Date().toISOString(),
+      type: "announcement",
+    };
+
+    this.devices.announcements.push(announcement);
+    this.saveDevices();
+
+    this.logAdminAction(adminUser, "send_announcement", "all_users", { message });
+    return announcement;
+  }
+
+  sendDirectMessage(username, message, adminUser) {
+    if (!this.devices.messages) {
+      this.devices.messages = [];
+    }
+
+    const directMessage = {
+      id: crypto.randomBytes(8).toString("hex"),
+      username,
+      message,
+      adminUser,
+      timestamp: new Date().toISOString(),
+      type: "direct_message",
+      read: false,
+    };
+
+    this.devices.messages.push(directMessage);
+    this.saveDevices();
+
+    this.logAdminAction(adminUser, "send_direct_message", username, { message });
+    return directMessage;
+  }
+
+  getMessagesForUser(username) {
+    return (this.devices.messages || []).filter(m => m.username === username && !m.read);
+  }
+
+  markMessageAsRead(messageId) {
+    if (this.devices.messages) {
+      const message = this.devices.messages.find(m => m.id === messageId);
+      if (message) {
+        message.read = true;
+        this.saveDevices();
+      }
+    }
+  }
+
+  getRecentAnnouncements(limit = 5) {
+    const announcements = this.devices.announcements || [];
+    return announcements.slice(-limit).reverse();
   }
 }
 
