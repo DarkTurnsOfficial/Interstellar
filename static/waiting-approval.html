@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waiting for Approval</title>
+    <link rel="stylesheet" href="/assets/css/global.css?v=6">
+    <style>
+        .waiting-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            color: white;
+        }
+
+        .status-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .device-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .device-info h3 {
+            margin-top: 0;
+            color: #ff9800;
+        }
+
+        .device-info p {
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .instructions {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid #2196F3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #2196F3;
+        }
+
+        .refresh-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #4CAF50;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="center">
+    <div class="waiting-container">
+        <div class="status-icon">⏳</div>
+        <h1>Waiting for Admin Approval</h1>
+        <p>Your device has been logged and is waiting for administrator approval to access the proxy.</p>
+
+        <div class="instructions">
+            <strong>📋 What happens next:</strong><br>
+            • An administrator will review your device information<br>
+            • You will be notified once approved or denied<br>
+            • Please wait patiently for the review process
+        </div>
+
+        <div class="device-info">
+            <h3>Your Device Information</h3>
+            <p><strong>Username:</strong> <span id="username">Loading...</span></p>
+            <p><strong>IP Address:</strong> <span id="device-ip">Loading...</span></p>
+            <p><strong>Browser:</strong> <span id="device-ua">Loading...</span></p>
+            <p><strong>Request Time:</strong> <span id="device-time">Loading...</span></p>
+        </div>
+
+        <button class="refresh-btn" onclick="checkStatus()">
+            🔄 Check Status
+        </button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Checking approval status...</p>
+        </div>
+    </div>
+
+    <script>
+        let deviceFingerprint = '';
+
+        // Load device info when page loads
+        async function loadDeviceInfo() {
+            try {
+                const response = await fetch('/api/device-info');
+                const data = await response.json();
+
+                document.getElementById('username').textContent = data.username || 'Unknown';
+                document.getElementById('device-ip').textContent = data.ip;
+                document.getElementById('device-ua').textContent = data.userAgent;
+                document.getElementById('device-time').textContent = new Date(data.timestamp).toLocaleString();
+
+                deviceFingerprint = data.fingerprint;
+            } catch (error) {
+                console.error('Error loading device info:', error);
+                document.getElementById('username').textContent = 'Error loading';
+                document.getElementById('device-ip').textContent = 'Error loading';
+                document.getElementById('device-ua').textContent = 'Error loading';
+                document.getElementById('device-time').textContent = 'Error loading';
+            }
+        }
+
+        async function checkStatus() {
+            showLoading();
+
+            try {
+                const response = await fetch('/api/device-status');
+                const data = await response.json();
+
+                if (data.status === 'approved') {
+                    alert('Your device has been approved! Redirecting to the proxy...');
+                    window.location.href = '/';
+                } else if (data.status === 'blocked') {
+                    alert('Your device has been denied access. Please contact the administrator.');
+                    window.close();
+                } else {
+                    alert('Your device is still pending approval. Please wait for the administrator to review your request.');
+                }
+            } catch (error) {
+                console.error('Error checking status:', error);
+                alert('Error checking approval status. Please try again.');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.querySelector('.refresh-btn').disabled = true;
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.querySelector('.refresh-btn').disabled = false;
+        }
+
+        // Load device info when page loads
+        loadDeviceInfo();
+
+        // Auto-check status every 30 seconds
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+
+</html>

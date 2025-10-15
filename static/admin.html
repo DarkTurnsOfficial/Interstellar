@@ -202,7 +202,7 @@
 
         function updateStats(data) {
             document.getElementById('approved-count').textContent = data.approved.length;
-            document.getElementById('pending-count').textContent = data.pending.length;
+            document.getElementById('pending-count').textContent = data.pendingDetails ? data.pendingDetails.length : 0;
             document.getElementById('blocked-count').textContent = data.blocked.length;
         }
 
@@ -219,12 +219,26 @@
 
             // Update pending devices
             const pendingContainer = document.getElementById('pending-devices');
-            if (data.pending.length === 0) {
+            if (data.pendingDetails && data.pendingDetails.length === 0) {
                 pendingContainer.innerHTML = '<div class="empty-state">No pending devices</div>';
-            } else {
-                pendingContainer.innerHTML = data.pending.map(fingerprint =>
-                    `<div class="device-item pending">${fingerprint}</div>`
+            } else if (data.pendingDetails) {
+                pendingContainer.innerHTML = data.pendingDetails.map(device =>
+                    `<div class="device-item pending">
+                        <div style="margin-bottom: 10px;">
+                            <strong>Username:</strong> ${device.username}<br>
+                            <strong>IP:</strong> ${device.ip}<br>
+                            <strong>Browser:</strong> ${device.userAgent}<br>
+                            <strong>Time:</strong> ${new Date(device.timestamp).toLocaleString()}<br>
+                            <strong>Fingerprint:</strong> ${device.fingerprint.substring(0, 16)}...
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-approve" onclick="approveDevice('${device.fingerprint}')" style="margin-right: 10px;">✅ Approve</button>
+                            <button class="btn btn-deny" onclick="denyDevice('${device.fingerprint}')">❌ Deny</button>
+                        </div>
+                    </div>`
                 ).join('');
+            } else {
+                pendingContainer.innerHTML = '<div class="empty-state">No pending devices</div>';
             }
 
             // Update blocked devices
@@ -235,6 +249,58 @@
                 blockedContainer.innerHTML = data.blocked.map(fingerprint =>
                     `<div class="device-item blocked">${fingerprint}</div>`
                 ).join('');
+            }
+        }
+
+        async function approveDevice(fingerprint) {
+            if (!confirm('Are you sure you want to approve this device?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/approve-device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fingerprint: fingerprint })
+                });
+
+                if (response.ok) {
+                    alert('Device approved successfully!');
+                    loadDevices(); // Refresh the list
+                } else {
+                    throw new Error('Failed to approve device');
+                }
+            } catch (error) {
+                console.error('Error approving device:', error);
+                alert('Error approving device. Please try again.');
+            }
+        }
+
+        async function denyDevice(fingerprint) {
+            if (!confirm('Are you sure you want to permanently block this device? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/block-device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fingerprint: fingerprint })
+                });
+
+                if (response.ok) {
+                    alert('Device blocked successfully!');
+                    loadDevices(); // Refresh the list
+                } else {
+                    throw new Error('Failed to block device');
+                }
+            } catch (error) {
+                console.error('Error blocking device:', error);
+                alert('Error blocking device. Please try again.');
             }
         }
 

@@ -49,12 +49,14 @@ class DeviceManager {
     const userAgent = req.get("User-Agent") || "Unknown";
     const ip = req.ip || req.connection.remoteAddress || "Unknown";
     const timestamp = new Date().toISOString();
+    const username = req.auth ? req.auth.user : "Unknown";
 
     return {
       fingerprint,
       userAgent,
       ip,
       timestamp,
+      username,
       status: this.getDeviceStatus(fingerprint),
     };
   }
@@ -77,9 +79,44 @@ class DeviceManager {
     }
   }
 
+  getPendingDeviceInfo() {
+    return this.devices.pendingDetails || [];
+  }
+
+  addPendingDeviceWithDetails(deviceInfo) {
+    if (!this.devices.pending.includes(deviceInfo.fingerprint)) {
+      this.devices.pending.push(deviceInfo.fingerprint);
+
+      // Store detailed info for admin review
+      if (!this.devices.pendingDetails) {
+        this.devices.pendingDetails = [];
+      }
+
+      // Remove any existing entry for this fingerprint
+      this.devices.pendingDetails = this.devices.pendingDetails.filter(d => d.fingerprint !== deviceInfo.fingerprint);
+
+      // Add new entry
+      this.devices.pendingDetails.push({
+        fingerprint: deviceInfo.fingerprint,
+        username: deviceInfo.username,
+        ip: deviceInfo.ip,
+        userAgent: deviceInfo.userAgent,
+        timestamp: deviceInfo.timestamp,
+      });
+
+      this.saveDevices();
+    }
+  }
+
   approveDevice(fingerprint) {
     // Remove from pending
     this.devices.pending = this.devices.pending.filter(f => f !== fingerprint);
+
+    // Remove from pending details
+    if (this.devices.pendingDetails) {
+      this.devices.pendingDetails = this.devices.pendingDetails.filter(d => d.fingerprint !== fingerprint);
+    }
+
     // Add to approved
     if (!this.devices.approved.includes(fingerprint)) {
       this.devices.approved.push(fingerprint);
@@ -90,6 +127,12 @@ class DeviceManager {
   blockDevice(fingerprint) {
     // Remove from pending
     this.devices.pending = this.devices.pending.filter(f => f !== fingerprint);
+
+    // Remove from pending details
+    if (this.devices.pendingDetails) {
+      this.devices.pendingDetails = this.devices.pendingDetails.filter(d => d.fingerprint !== fingerprint);
+    }
+
     // Add to blocked
     if (!this.devices.blocked.includes(fingerprint)) {
       this.devices.blocked.push(fingerprint);

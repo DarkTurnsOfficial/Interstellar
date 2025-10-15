@@ -34,7 +34,7 @@ if (config.challenge !== false) {
 // Device approval middleware
 app.use((req, res, next) => {
   // Skip device check for API endpoints, static files, admin pages, and device approval page
-  if (req.path.startsWith("/api/") || req.path.startsWith("/assets/") || req.path.startsWith("/ca/") || req.path === "/admin" || req.path === "/device-approval") {
+  if (req.path.startsWith("/api/") || req.path.startsWith("/assets/") || req.path.startsWith("/ca/") || req.path === "/admin" || req.path === "/waiting-approval") {
     return next();
   }
 
@@ -56,14 +56,14 @@ app.use((req, res, next) => {
   }
 
   if (status === "new") {
-    console.log(chalk.yellow(`🆕 New device detected: ${deviceInfo.ip} - ${deviceInfo.userAgent}`));
-    deviceManager.addPendingDevice(deviceInfo);
-    return res.redirect("/device-approval");
+    console.log(chalk.yellow(`🆕 New device detected: ${deviceInfo.username} (${deviceInfo.ip}) - ${deviceInfo.userAgent}`));
+    deviceManager.addPendingDeviceWithDetails(deviceInfo);
+    return res.redirect("/waiting-approval");
   }
 
   if (status === "pending") {
-    console.log(chalk.yellow(`⏳ Pending device attempted access: ${deviceInfo.ip} - ${deviceInfo.userAgent}`));
-    return res.redirect("/device-approval");
+    console.log(chalk.yellow(`⏳ Pending device attempted access: ${deviceInfo.username} (${deviceInfo.ip}) - ${deviceInfo.userAgent}`));
+    return res.redirect("/waiting-approval");
   }
 
   // Device is approved, continue
@@ -138,7 +138,7 @@ const routes = [
   { path: "/play.html", file: "games.html" },
   { path: "/c", file: "settings.html" },
   { path: "/d", file: "tabs.html" },
-  { path: "/device-approval", file: "device-approval.html" },
+  { path: "/waiting-approval", file: "waiting-approval.html" },
   { path: "/admin", file: "admin.html" },
   { path: "/", file: "index.html" },
 ];
@@ -153,6 +153,11 @@ routes.forEach(route => {
 app.get("/api/device-info", (req, res) => {
   const deviceInfo = deviceManager.getDeviceInfo(req);
   res.json(deviceInfo);
+});
+
+app.get("/api/device-status", (req, res) => {
+  const deviceInfo = deviceManager.getDeviceInfo(req);
+  res.json({ status: deviceInfo.status });
 });
 
 app.post("/api/approve-device", (req, res) => {
@@ -187,6 +192,7 @@ app.get("/api/admin/devices", (_req, res) => {
     approved: deviceManager.getApprovedDevices(),
     pending: deviceManager.getPendingDevices(),
     blocked: deviceManager.getBlockedDevices(),
+    pendingDetails: deviceManager.getPendingDeviceInfo(),
   });
 });
 
