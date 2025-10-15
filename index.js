@@ -33,8 +33,8 @@ if (config.challenge !== false) {
 
 // Device approval middleware
 app.use((req, res, next) => {
-  // Skip device check for API endpoints and static files
-  if (req.path.startsWith("/api/") || req.path.startsWith("/assets/") || req.path.startsWith("/ca/")) {
+  // Skip device check for API endpoints, static files, admin pages, and device approval page
+  if (req.path.startsWith("/api/") || req.path.startsWith("/assets/") || req.path.startsWith("/ca/") || req.path === "/admin" || req.path === "/device-approval") {
     return next();
   }
 
