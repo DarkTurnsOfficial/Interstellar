@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Approval Required</title>
+    <link rel="stylesheet" href="/assets/css/global.css?v=6">
+    <style>
+        .approval-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            color: white;
+        }
+
+        .device-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .device-info h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+
+        .device-info p {
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .approval-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .btn-approve {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-approve:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .btn-deny {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-deny:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+        }
+
+        .warning {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #ffc107;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #4CAF50;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="center">
+    <div class="approval-container">
+        <h1>🔒 Device Approval Required</h1>
+        <p>A new device is trying to access the proxy. Please review the device information and approve or deny access.
+        </p>
+
+        <div class="warning">
+            <strong>⚠️ Security Notice:</strong> Only approve devices you recognize. Denied devices will be permanently
+            blocked.
+        </div>
+
+        <div class="device-info">
+            <h3>Device Information</h3>
+            <p><strong>IP Address:</strong> <span id="device-ip">Loading...</span></p>
+            <p><strong>User Agent:</strong> <span id="device-ua">Loading...</span></p>
+            <p><strong>Timestamp:</strong> <span id="device-time">Loading...</span></p>
+            <p><strong>Fingerprint:</strong> <span id="device-fingerprint">Loading...</span></p>
+        </div>
+
+        <div class="approval-buttons">
+            <button class="btn btn-approve" onclick="approveDevice()">
+                ✅ Approve Device
+            </button>
+            <button class="btn btn-deny" onclick="denyDevice()">
+                ❌ Deny Device
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing request...</p>
+        </div>
+    </div>
+
+    <script>
+        let deviceFingerprint = '';
+
+        // Get device info from URL parameters or make a request
+        async function loadDeviceInfo() {
+            try {
+                const response = await fetch('/api/device-info');
+                const data = await response.json();
+
+                document.getElementById('device-ip').textContent = data.ip;
+                document.getElementById('device-ua').textContent = data.userAgent;
+                document.getElementById('device-time').textContent = data.timestamp;
+                document.getElementById('device-fingerprint').textContent = data.fingerprint.substring(0, 16) + '...';
+
+                deviceFingerprint = data.fingerprint;
+            } catch (error) {
+                console.error('Error loading device info:', error);
+                document.getElementById('device-ip').textContent = 'Error loading';
+                document.getElementById('device-ua').textContent = 'Error loading';
+                document.getElementById('device-time').textContent = 'Error loading';
+                document.getElementById('device-fingerprint').textContent = 'Error loading';
+            }
+        }
+
+        async function approveDevice() {
+            if (!deviceFingerprint) {
+                alert('Device information not loaded. Please refresh the page.');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('/api/approve-device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fingerprint: deviceFingerprint })
+                });
+
+                if (response.ok) {
+                    alert('Device approved successfully! Redirecting...');
+                    window.location.href = '/';
+                } else {
+                    throw new Error('Failed to approve device');
+                }
+            } catch (error) {
+                console.error('Error approving device:', error);
+                alert('Error approving device. Please try again.');
+                hideLoading();
+            }
+        }
+
+        async function denyDevice() {
+            if (!deviceFingerprint) {
+                alert('Device information not loaded. Please refresh the page.');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to permanently block this device? This action cannot be undone.')) {
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('/api/block-device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fingerprint: deviceFingerprint })
+                });
+
+                if (response.ok) {
+                    alert('Device blocked successfully!');
+                    window.close();
+                } else {
+                    throw new Error('Failed to block device');
+                }
+            } catch (error) {
+                console.error('Error blocking device:', error);
+                alert('Error blocking device. Please try again.');
+                hideLoading();
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.querySelectorAll('.btn').forEach(btn => btn.disabled = true);
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.querySelectorAll('.btn').forEach(btn => btn.disabled = false);
+        }
+
+        // Load device info when page loads
+        loadDeviceInfo();
+    </script>
+</body>
+
+</html>
