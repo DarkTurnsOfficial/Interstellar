@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,24 +16,24 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
         }
-
+        
         .section {
             margin: 30px 0;
             padding: 20px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 10px;
         }
-
+        
         .section h2 {
             margin-top: 0;
             color: #4CAF50;
         }
-
+        
         .device-list {
             display: grid;
             gap: 10px;
         }
-
+        
         .device-item {
             background: rgba(255, 255, 255, 0.1);
             padding: 15px;
@@ -43,40 +42,40 @@
             font-family: monospace;
             font-size: 14px;
         }
-
+        
         .device-item.blocked {
             border-left-color: #f44336;
         }
-
+        
         .device-item.pending {
             border-left-color: #ff9800;
         }
-
+        
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
-
+        
         .stat-card {
             background: rgba(0, 0, 0, 0.3);
             padding: 20px;
             border-radius: 10px;
             text-align: center;
         }
-
+        
         .stat-number {
             font-size: 2em;
             font-weight: bold;
             color: #4CAF50;
         }
-
+        
         .stat-label {
             margin-top: 10px;
             opacity: 0.8;
         }
-
+        
         .btn {
             padding: 10px 20px;
             border: none;
@@ -85,23 +84,23 @@
             margin: 5px;
             font-weight: bold;
         }
-
+        
         .btn-refresh {
             background: #2196F3;
             color: white;
         }
-
+        
         .btn-clear {
             background: #f44336;
             color: white;
         }
-
+        
         .loading {
             display: none;
             text-align: center;
             margin: 20px 0;
         }
-
+        
         .spinner {
             border: 4px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
@@ -111,17 +110,12 @@
             animation: spin 1s linear infinite;
             margin: 0 auto;
         }
-
+        
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-
+        
         .empty-state {
             text-align: center;
             padding: 40px;
@@ -129,11 +123,10 @@
         }
     </style>
 </head>
-
 <body class="center">
     <div class="admin-container">
         <h1>🔧 Device Management - Admin Panel</h1>
-
+        
         <div class="stats" id="stats">
             <div class="stat-card">
                 <div class="stat-number" id="approved-count">-</div>
@@ -147,83 +140,36 @@
                 <div class="stat-number" id="blocked-count">-</div>
                 <div class="stat-label">Blocked Devices</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number" id="active-sessions">-</div>
-                <div class="stat-label">Active Sessions</div>
-            </div>
         </div>
-
+        
         <div style="text-align: center; margin: 20px 0;">
             <button class="btn btn-refresh" onclick="loadDevices()">🔄 Refresh</button>
             <button class="btn btn-clear" onclick="clearAllDevices()">🗑️ Clear All</button>
         </div>
-
+        
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <p>Loading device information...</p>
         </div>
-
+        
         <div class="section">
             <h2>✅ Approved Devices</h2>
             <div class="device-list" id="approved-devices">
                 <div class="empty-state">No approved devices</div>
             </div>
         </div>
-
+        
         <div class="section">
             <h2>⏳ Pending Devices</h2>
             <div class="device-list" id="pending-devices">
                 <div class="empty-state">No pending devices</div>
             </div>
         </div>
-
+        
         <div class="section">
             <h2>🚫 Blocked Devices</h2>
             <div class="device-list" id="blocked-devices">
                 <div class="empty-state">No blocked devices</div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>👥 Active Sessions</h2>
-            <div class="device-list" id="active-sessions-list">
-                <div class="empty-state">No active sessions</div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>🚨 Security Alerts</h2>
-            <div class="device-list" id="security-alerts">
-                <div class="empty-state">No security alerts</div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>📢 Communication Tools</h2>
-            <div style="display: grid; gap: 20px;">
-                <div>
-                    <h3>Send Announcement</h3>
-                    <textarea id="announcement-message" placeholder="Enter announcement message..."
-                        style="width: 100%; height: 80px; padding: 10px; border-radius: 5px; border: 1px solid #ccc;"></textarea>
-                    <button class="btn btn-approve" onclick="sendAnnouncement()" style="margin-top: 10px;">📢 Send
-                        Announcement</button>
-                </div>
-                <div>
-                    <h3>Send Direct Message</h3>
-                    <input type="text" id="message-username" placeholder="Username"
-                        style="width: 200px; padding: 8px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc;">
-                    <textarea id="direct-message" placeholder="Enter direct message..."
-                        style="width: 100%; height: 60px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-top: 10px;"></textarea>
-                    <button class="btn btn-approve" onclick="sendDirectMessage()" style="margin-top: 10px;">💬 Send
-                        Message</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>📋 Audit Log</h2>
-            <div class="device-list" id="audit-log">
-                <div class="empty-state">No audit entries</div>
             </div>
         </div>
     </div>
@@ -231,302 +177,82 @@
     <script>
         async function loadDevices() {
             showLoading();
-
+            
             try {
-                const [devicesResponse, sessionsResponse, alertsResponse, auditResponse] = await Promise.all([
-                    fetch('/api/admin/devices'),
-                    fetch('/api/admin/sessions'),
-                    fetch('/api/admin/security-alerts'),
-                    fetch('/api/admin/audit-log?limit=20')
-                ]);
-
-                const devicesData = await devicesResponse.json();
-                const sessionsData = await sessionsResponse.json();
-                const alertsData = await alertsResponse.json();
-                const auditData = await auditResponse.json();
-
-                updateStats(devicesData, sessionsData);
-                updateDeviceLists(devicesData);
-                updateSessionsList(sessionsData);
-                updateSecurityAlerts(alertsData);
-                updateAuditLog(auditData);
-
+                const response = await fetch('/api/admin/devices');
+                const data = await response.json();
+                
+                updateStats(data);
+                updateDeviceLists(data);
+                
             } catch (error) {
-                console.error('Error loading data:', error);
-                alert('Error loading information');
+                console.error('Error loading devices:', error);
+                alert('Error loading device information');
             } finally {
                 hideLoading();
             }
         }
-
-        function updateStats(devicesData, sessionsData) {
-            document.getElementById('approved-count').textContent = devicesData.approved.length;
-            document.getElementById('pending-count').textContent = devicesData.pendingDetails ? devicesData.pendingDetails.length : 0;
-            document.getElementById('blocked-count').textContent = devicesData.blocked.length;
-            document.getElementById('active-sessions').textContent = sessionsData.sessions ? sessionsData.sessions.length : 0;
+        
+        function updateStats(data) {
+            document.getElementById('approved-count').textContent = data.approved.length;
+            document.getElementById('pending-count').textContent = data.pending.length;
+            document.getElementById('blocked-count').textContent = data.blocked.length;
         }
-
+        
         function updateDeviceLists(data) {
             // Update approved devices
             const approvedContainer = document.getElementById('approved-devices');
             if (data.approved.length === 0) {
                 approvedContainer.innerHTML = '<div class="empty-state">No approved devices</div>';
             } else {
-                approvedContainer.innerHTML = data.approved.map(fingerprint =>
+                approvedContainer.innerHTML = data.approved.map(fingerprint => 
                     `<div class="device-item">${fingerprint}</div>`
                 ).join('');
             }
-
+            
             // Update pending devices
             const pendingContainer = document.getElementById('pending-devices');
-            if (data.pendingDetails && data.pendingDetails.length === 0) {
+            if (data.pending.length === 0) {
                 pendingContainer.innerHTML = '<div class="empty-state">No pending devices</div>';
-            } else if (data.pendingDetails) {
-                pendingContainer.innerHTML = data.pendingDetails.map(device =>
-                    `<div class="device-item pending">
-                        <div style="margin-bottom: 10px;">
-                            <strong>Username:</strong> ${device.username}<br>
-                            <strong>IP:</strong> ${device.ip}<br>
-                            <strong>Browser:</strong> ${device.userAgent}<br>
-                            <strong>Time:</strong> ${new Date(device.timestamp).toLocaleString()}<br>
-                            <strong>Fingerprint:</strong> ${device.fingerprint.substring(0, 16)}...
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <button class="btn btn-approve" onclick="approveDevice('${device.fingerprint}')" style="margin-right: 10px;">✅ Approve</button>
-                            <button class="btn btn-deny" onclick="denyDevice('${device.fingerprint}')">❌ Deny</button>
-                        </div>
-                    </div>`
-                ).join('');
             } else {
-                pendingContainer.innerHTML = '<div class="empty-state">No pending devices</div>';
+                pendingContainer.innerHTML = data.pending.map(fingerprint => 
+                    `<div class="device-item pending">${fingerprint}</div>`
+                ).join('');
             }
-
+            
             // Update blocked devices
             const blockedContainer = document.getElementById('blocked-devices');
             if (data.blocked.length === 0) {
                 blockedContainer.innerHTML = '<div class="empty-state">No blocked devices</div>';
             } else {
-                blockedContainer.innerHTML = data.blocked.map(fingerprint =>
+                blockedContainer.innerHTML = data.blocked.map(fingerprint => 
                     `<div class="device-item blocked">${fingerprint}</div>`
                 ).join('');
             }
         }
-
-        async function approveDevice(fingerprint) {
-            if (!confirm('Are you sure you want to approve this device?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/approve-device', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ fingerprint: fingerprint })
-                });
-
-                if (response.ok) {
-                    alert('Device approved successfully!');
-                    loadDevices(); // Refresh the list
-                } else {
-                    throw new Error('Failed to approve device');
-                }
-            } catch (error) {
-                console.error('Error approving device:', error);
-                alert('Error approving device. Please try again.');
-            }
-        }
-
-        async function denyDevice(fingerprint) {
-            if (!confirm('Are you sure you want to permanently block this device? This action cannot be undone.')) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/block-device', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ fingerprint: fingerprint })
-                });
-
-                if (response.ok) {
-                    alert('Device blocked successfully!');
-                    loadDevices(); // Refresh the list
-                } else {
-                    throw new Error('Failed to block device');
-                }
-            } catch (error) {
-                console.error('Error blocking device:', error);
-                alert('Error blocking device. Please try again.');
-            }
-        }
-
-        function updateSessionsList(data) {
-            const sessionsContainer = document.getElementById('active-sessions-list');
-            if (!data.sessions || data.sessions.length === 0) {
-                sessionsContainer.innerHTML = '<div class="empty-state">No active sessions</div>';
-            } else {
-                sessionsContainer.innerHTML = data.sessions.map(session =>
-                    `<div class="device-item">
-                        <div style="margin-bottom: 10px;">
-                            <strong>User:</strong> ${session.username}<br>
-                            <strong>IP:</strong> ${session.ip}<br>
-                            <strong>Browser:</strong> ${session.userAgent}<br>
-                            <strong>Login Time:</strong> ${new Date(session.loginTime).toLocaleString()}<br>
-                            <strong>Last Activity:</strong> ${new Date(session.lastActivity).toLocaleString()}<br>
-                            <strong>Session ID:</strong> ${session.sessionId.substring(0, 20)}...
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <button class="btn btn-deny" onclick="terminateSession('${session.sessionId}')">🔌 Terminate Session</button>
-                        </div>
-                    </div>`
-                ).join('');
-            }
-        }
-
-        function updateSecurityAlerts(data) {
-            const alertsContainer = document.getElementById('security-alerts');
-            if (!data.alerts || data.alerts.length === 0) {
-                alertsContainer.innerHTML = '<div class="empty-state">No security alerts</div>';
-            } else {
-                alertsContainer.innerHTML = data.alerts.map(alert =>
-                    `<div class="device-item ${alert.severity === 'high' ? 'blocked' : 'pending'}">
-                        <strong>${alert.severity.toUpperCase()}:</strong> ${alert.message}<br>
-                        <small>Type: ${alert.type}</small>
-                    </div>`
-                ).join('');
-            }
-        }
-
-        function updateAuditLog(data) {
-            const auditContainer = document.getElementById('audit-log');
-            if (!data.auditLog || data.auditLog.length === 0) {
-                auditContainer.innerHTML = '<div class="empty-state">No audit entries</div>';
-            } else {
-                auditContainer.innerHTML = data.auditLog.map(entry =>
-                    `<div class="device-item">
-                        <strong>${entry.action.replace('_', ' ').toUpperCase()}</strong> by ${entry.adminUser}<br>
-                        <strong>Target:</strong> ${entry.target}<br>
-                        <strong>Time:</strong> ${new Date(entry.timestamp).toLocaleString()}<br>
-                        ${entry.details.message ? `<strong>Details:</strong> ${entry.details.message}` : ''}
-                    </div>`
-                ).join('');
-            }
-        }
-
-        async function terminateSession(sessionId) {
-            if (!confirm('Are you sure you want to terminate this session?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/admin/terminate-session', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ sessionId: sessionId })
-                });
-
-                if (response.ok) {
-                    alert('Session terminated successfully!');
-                    loadDevices(); // Refresh the list
-                } else {
-                    throw new Error('Failed to terminate session');
-                }
-            } catch (error) {
-                console.error('Error terminating session:', error);
-                alert('Error terminating session. Please try again.');
-            }
-        }
-
-        async function sendAnnouncement() {
-            const message = document.getElementById('announcement-message').value.trim();
-            if (!message) {
-                alert('Please enter an announcement message');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/admin/announcement', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ message: message })
-                });
-
-                if (response.ok) {
-                    alert('Announcement sent successfully!');
-                    document.getElementById('announcement-message').value = '';
-                    loadDevices(); // Refresh to show in audit log
-                } else {
-                    throw new Error('Failed to send announcement');
-                }
-            } catch (error) {
-                console.error('Error sending announcement:', error);
-                alert('Error sending announcement. Please try again.');
-            }
-        }
-
-        async function sendDirectMessage() {
-            const username = document.getElementById('message-username').value.trim();
-            const message = document.getElementById('direct-message').value.trim();
-
-            if (!username || !message) {
-                alert('Please enter both username and message');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/admin/direct-message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username: username, message: message })
-                });
-
-                if (response.ok) {
-                    alert('Direct message sent successfully!');
-                    document.getElementById('message-username').value = '';
-                    document.getElementById('direct-message').value = '';
-                    loadDevices(); // Refresh to show in audit log
-                } else {
-                    throw new Error('Failed to send direct message');
-                }
-            } catch (error) {
-                console.error('Error sending direct message:', error);
-                alert('Error sending direct message. Please try again.');
-            }
-        }
-
+        
         async function clearAllDevices() {
             if (!confirm('Are you sure you want to clear all device data? This will remove all approved, pending, and blocked devices.')) {
                 return;
             }
-
+            
             // Note: This would require implementing a clear endpoint in the backend
             alert('Clear functionality would need to be implemented in the backend API');
         }
-
+        
         function showLoading() {
             document.getElementById('loading').style.display = 'block';
         }
-
+        
         function hideLoading() {
             document.getElementById('loading').style.display = 'none';
         }
-
+        
         // Load devices when page loads
         loadDevices();
-
+        
         // Auto-refresh every 30 seconds
         setInterval(loadDevices, 30000);
     </script>
 </body>
-
 </html>
